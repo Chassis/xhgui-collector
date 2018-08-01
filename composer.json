@@ -1,10 +1,10 @@
 {
-    "name": "perftools/xhgui-collector",
+    "name": "chassis/xhgui-collector",
     "description": "Library for collecting and storing XHProf results for later use by XHGUI.",
     "authors": [
         {
-            "name":  "Lauri Piisang",
-            "email": "lauri.piisang@eesti.ee"
+            "name":  "Bronson Quick",
+            "email": "bronson@bronsonquick.com.au"
         }
     ],
     "license": "MIT",
