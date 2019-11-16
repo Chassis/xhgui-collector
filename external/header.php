@@ -131,13 +131,17 @@ register_shutdown_function(
         // flush() asks PHP to send any data remaining in the output buffers. This is normally done when the script completes, but
         // since we're delaying that a bit by dealing with the xhprof stuff, we'll do it now to avoid making the user wait.
         ignore_user_abort(true);
-        flush();
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
+        if (function_exists('session_write_close')) {
+            session_write_close();
         }
+        flush();
 
         if (!defined('XHGUI_ROOT_DIR')) {
-            require dirname(dirname(__FILE__)) . '/src/bootstrap.php';
+            require dirname(__DIR__) . '/src/bootstrap.php';
+        }
+
+        if (Xhgui_Config::read('fastcgi_finish_request') && function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
         }
 
         $uri = array_key_exists('REQUEST_URI', $_SERVER)
@@ -146,6 +150,11 @@ register_shutdown_function(
         if (empty($uri) && isset($_SERVER['argv'])) {
             $cmd = basename($_SERVER['argv'][0]);
             $uri = $cmd . ' ' . implode(' ', array_slice($_SERVER['argv'], 1));
+        }
+        
+        $replace_url = Xhgui_Config::read('profiler.replace_url');
+        if (is_callable($replace_url)) {
+            $uri = $replace_url($uri);
         }
 
         $time = array_key_exists('REQUEST_TIME', $_SERVER)
@@ -159,13 +168,8 @@ register_shutdown_function(
             $requestTimeFloat[1] = 0;
         }
 
-        if (Xhgui_Config::read('save.handler') === 'mongodb') {
-            $requestTs = new MongoDate($time);
-            $requestTsMicro = new MongoDate($requestTimeFloat[0], $requestTimeFloat[1]);
-        } else {
-            $requestTs = array('sec' => $time, 'usec' => 0);
-            $requestTsMicro = array('sec' => $requestTimeFloat[0], 'usec' => $requestTimeFloat[1]);
-        }
+        $requestTs = array('sec' => $time, 'usec' => 0);
+        $requestTsMicro = array('sec' => $requestTimeFloat[0], 'usec' => $requestTimeFloat[1]);
 
         $data['meta'] = array(
             'url' => $uri,
